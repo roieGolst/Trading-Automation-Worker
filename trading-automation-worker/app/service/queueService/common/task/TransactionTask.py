@@ -1,17 +1,22 @@
-from typing import Union, Literal
+from enum import Enum
 from typing_extensions import Self
 from uuid import UUID
 
 from .BaseTask import BaseTask, TaskType
 
 
+class TransactionMethod(Enum):
+    Sell = "Sell"
+    Buy = "Buy"
+
+
 class TransactionTask(BaseTask):
     task_type = TaskType.Transaction
-    transaction_method: Union[Literal["sell"], Literal["buy"]]
+    transaction_method: TransactionMethod
     amount: int
     ticker: str
 
-    def __init__(self, task_id: UUID, method: Union[Literal["sell"], Literal["buy"]], amount: int, ticker: str):
+    def __init__(self, task_id: UUID, method: TransactionMethod, amount: int, ticker: str):
         super().__init__(task_type=TaskType.Transaction, task_id=task_id)
         self.transaction_method = method
         self.amount = amount
@@ -21,15 +26,13 @@ class TransactionTask(BaseTask):
     def parse(cls, task_id: str, task: dict) -> Self:
         try:
             method = task["method", None]
+            transaction_method = TransactionMethod[method]
             amount = task["amount", None]
             ticker = task["ticker", None]
 
-            if method not in ("sell", "buy"):
-                raise ValueError(f"Transaction Parser Error: method: {method} is not allowed. use 'sell' or 'buy only'")
-
             return TransactionTask(
                 task_id=UUID(task_id),
-                method=method,
+                method=transaction_method,
                 amount=amount,
                 ticker=ticker
             )

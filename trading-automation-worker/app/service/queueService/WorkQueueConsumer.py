@@ -1,3 +1,4 @@
+import logging
 import json
 import uuid
 import pika
@@ -20,23 +21,28 @@ class WorkQueueConsumer:
     __default_queue: Queue.DeclareOk
     __handler: Handler
     __parser: TaskParser
+    __logger: logging.Logger
 
     # TODO: Inject the parser better
-    def __init__(self, host: str, handler: Handler, parser=TaskParser()):
+    # TODO: Reconsider if constructor is good pleace to init the code and invoke listen process
+    def __init__(self, host: str, handler: Handler, logger: logging.Logger, parser=TaskParser()):
+        self.__handler = handler
+        self.__parser = parser
+        self.__logger = logger
         try:
-            self.__handler = handler
-            self.__parser = parser
+            # TODO: Document why BlockingConnection is chosen
             self.__connection = pika.BlockingConnection(pika.ConnectionParameters(host))
             self.__channel = self.__connection.channel()
-            print("Successfully connect")
+            self.__logger.info("Queue service successfully connected")
 
             self.__default_listen()
             self.__declare_task_exchange()
+            self.__logger.debug("Listening the to default exchange, and waiting for listen task")
             self.__channel.start_consuming()
-            print("Listening...")
 
         except Exception as err:
-            print("An error occurred:", type(err).__name__, "–", err)
+            self.__logger.error(err)
+            # print("An error occurred:", type(err).__name__, "–", err)
 
     def __default_listen(self):
         self.__assert_exchange(self.__DEFAULT_EXCHANGE, ExchangeType.Fanout)
@@ -73,8 +79,6 @@ class WorkQueueConsumer:
         body = body.decode("utf-8")
         json_body = json.loads(body)
 
-        print(f"Listen Task: {{{body}}}")
-
         self.__consume_from_task_exchange(
             queue_name=json_body["queue_name"],
             routing_key=json_body["rt"]
@@ -90,6 +94,7 @@ class WorkQueueConsumer:
 
             self.__handler(task, lambda: ch.basic_ack(delivery_tag=method.delivery_tag))
         except TaskParser.ParserError as err:
+            self.__logger.error(err)
             ch.basic_reject(method.delivery_tag)
 
     def __consume_from_task_exchange(self, queue_name: str, routing_key: str):
@@ -97,6 +102,7 @@ class WorkQueueConsumer:
             queue=queue_name,
             durable=True,
         )
-
         self.__channel.queue_bind(queue=queue_name, exchange=self.__TASK_EXCHANGE, routing_key=routing_key)
         self.__channel.basic_consume(queue=queue_name, on_message_callback=self.__handler_wrapper, auto_ack=False)
+
+        self.__logger.debug(f"Start listening for: {queue_name}, routing key is: {routing_key}")

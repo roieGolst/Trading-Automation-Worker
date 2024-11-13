@@ -11,6 +11,7 @@ from service.queueService.common.task.ActivationTask.ActivisionTask import Activ
 class AccessTokenCreds:
     access_token: str
 
+
 class AccessTokenActivationTask(ActivationTask, ABC):
     cred: AccessTokenCreds
 

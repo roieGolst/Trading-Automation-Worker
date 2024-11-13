@@ -1,19 +1,17 @@
 from abc import abstractmethod
-from typing import Dict, Any
+from typing import Any
+from uuid import UUID
 
-from service.queueService import BaseTask, TaskType, ParseFunction
-from service.queueService.common.task.ActivationTask.AccessTokenActivationTask import TradierActivationTask
-from service.queueService.common.task.ActivationTask.EmailOnlyActivationTask import FennelActivationTask
-from service.queueService.common.task.ActivationTask.UsernamePasswordActivationTask import *
-from service.queueService.common.task.ActivationTask.UsernamePasswordDeviceIDPINActivationTask import *
-from service.queueService.common.task.ActivationTask.UsernamePasswordOTPActivationTask import *
-from service.queueService.common.task.ActivationTask.UsernamePasswordPhoneVerificationActivationTask import *
+from typing_extensions import Self
+
+from service.queueService import BaseTask, TaskType
+from service.queueService.common.task.BaseTask import Brokerage
 
 
-class ActivationTask(BaseTask, ABC):
+class ActivationTask(BaseTask):
     brokerage: Brokerage
     accountId: str
-    cred: Tuple[any]
+    cred: object
 
     def __init__(self, task_id: UUID, brokerage: Brokerage, account_id: UUID, creds: Any):
         super().__init__(task_type=TaskType.Activation, task_id=task_id)
@@ -22,30 +20,14 @@ class ActivationTask(BaseTask, ABC):
         self.cred = creds
 
     @classmethod
-    @abstractmethod
     def parse(cls, task_id: str, task: dict) -> Self:
         try:
-            brokerage: Brokerage = task.get("brokerage")
-            brokerage_parse_function: Dict[Brokerage, ParseFunction] = {
-                Brokerage.BBAE: BBAEActivationTask.parse,
-                Brokerage.Chase: ChaseActivationTask.parse,
-                Brokerage.DSPAC: DSPACActivationTask.parse,
-                Brokerage.Fennel: FennelActivationTask.parse,
-                Brokerage.Fidelity: FidelityActivationTask.parse,
-                Brokerage.Firstrade: FirstradeActivationTask.parse,
-                Brokerage.Public: PublicActivationTask.parse,
-                Brokerage.Robinhood: RobinhoodActivationTask.parse,
-                Brokerage.Schwab: SchwabActivationTask.parse,
-                Brokerage.SoFi: SoFiActivationTask.parse,
-                Brokerage.Tornado: TornadoActivationTask.parse,
-                Brokerage.Tradier: TradierActivationTask.parse,
-                Brokerage.Tastytrade: TastytradeActivationTask.parse,
-                Brokerage.Webull: WebullActivationTask.parse,
-                Brokerage.Vanguard: VanguardActivationTask.parse,
-                Brokerage.WellsFargo: WellsFargoActivationTask.parse,
-            }
+            brokerage: Brokerage = Brokerage[task.get("brokerage")]
+            account_id = task.get("account_id")
+            creds = task.get("creds")
+            return ActivationTask(UUID(task_id), brokerage,  UUID(account_id), creds)
+            # return brokerage_parse_function[brokerage]
 
-            return brokerage_parse_function[brokerage]
         except Exception as err:
             # TODO: Replace with Error handling
             raise Exception(f"ActivationTask Parser Error: {err}")

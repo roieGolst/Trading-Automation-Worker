@@ -34,7 +34,7 @@ class TaskParser:
     def __validate_task_structure(payload: dict) -> Tuple[TaskType, str]:
         try:
             task_type: TaskType = TaskType[payload.get("type", "")]
-            task_id = payload.get("id")
+            task_id = payload.get("task_id")
             if not task_type or not task_id:
                 raise TaskParser.ParserError("Invalid Task, 'type, 'id' are required fields")
 

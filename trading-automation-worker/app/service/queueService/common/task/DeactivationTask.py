@@ -3,7 +3,7 @@ from uuid import UUID
 
 from typing_extensions import Self
 
-from BaseTask import BaseTask, TaskType
+from service.queueService.common.task.BaseTask import BaseTask, TaskType
 
 
 class DeactivationTask(BaseTask):
