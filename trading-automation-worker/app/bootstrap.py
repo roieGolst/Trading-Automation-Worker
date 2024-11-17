@@ -1,15 +1,40 @@
+import uuid
 from dataclasses import dataclass
 from logging import Logger
 
-from service.queueService import Handler, WorkQueueConsumer
+import service.queueService as Consumer
+from service.queueService.ConsumerRepository import ConsumerRepository
+from service.queueService.IConsumerRepository import IConsumerRepository
+from service.queueService.IConsumer import ConsumerParameters, ConnectionParameters
+from service.queueService.utils.TaskParser import TaskParser
 
 
 @dataclass
 class BootstrapArgs:
     host: str
-    handler_function: Handler
+    port: int
+    handler_function: Consumer.common.types.Handler
     logger: Logger
 
 
-def bootstrap(args: BootstrapArgs):
-    WorkQueueConsumer(args.host, args.handler_function, logger=args.logger)
+async def bootstrap(args: BootstrapArgs):
+    # TODO: Consider to use DI
+    default_consumer = Consumer.dataSource.AsyncRabbitMQConsumer(
+        task_parser=TaskParser(),
+        logger=args.logger,
+        parameters=ConsumerParameters(
+            consumer_tag=str(uuid.uuid4()),
+            default_queue="default",
+            default_exchanges="listen_task_exchange",
+            task_exchange="task_exchange",
+            connection_params=ConnectionParameters(
+                host=args.host,
+                port=args.port
+            )
+        )
+    )
+
+    consumer_repo: IConsumerRepository = ConsumerRepository(default_consumer)
+
+    consumer_repo.set_data_handler(args.handler_function)
+    await consumer_repo.consume()

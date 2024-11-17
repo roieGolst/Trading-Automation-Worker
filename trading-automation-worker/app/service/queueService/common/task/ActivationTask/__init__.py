@@ -1,4 +1,4 @@
-from service.queueService import ParseFunction, Brokerage
+from service.queueService.common.task.BaseTask import ParseFunction, Brokerage
 from service.queueService.common.task.ActivationTask.AccessTokenActivationTask import TradierActivationTask
 from service.queueService.common.task.ActivationTask.EmailOnlyActivationTask import FennelActivationTask
 from service.queueService.common.task.ActivationTask.UsernamePasswordActivationTask import BBAEActivationTask, \

@@ -1,9 +1,9 @@
+import asyncio
 import sys
 import logging
-from service.queueService import AckFunction
-from service.queueService.common.task.ActivationTask.UsernamePasswordActivationTask import BBAEActivationTask
-from service.queueService.common.task.BaseTask import BaseTask, TaskType
+import service.queueService as qs
 from bootstrap import bootstrap, BootstrapArgs
+from service.queueService.common.task.ActivationTask.UsernamePasswordActivationTask import BBAEActivationTask
 
 TASK_HANDLER_REGISTRY = {}
 
@@ -16,13 +16,13 @@ def register_handler(task_class):
     return decorator
 
 
-@register_handler(TaskType.Deactivation)
+@register_handler(qs.common.task.TaskType.Deactivation)
 def handle_deactivation_task(task: BBAEActivationTask) -> None:
     logger.debug("Handling ActivationTask")
     logger.debug(f"Task: {task}")
 
 
-@register_handler(TaskType.Activation)
+@register_handler(qs.common.task.TaskType.Activation)
 def handle_activation_task(task: BBAEActivationTask) -> None:
     logger.debug("Handling ActivationTask")
     logger.debug(f"Task: {task}")
@@ -47,7 +47,7 @@ logger.addHandler(stdoutHandler)
 logger.addHandler(errHandler)
 
 
-def handler(task: BaseTask, ack: AckFunction) -> None:
+def handler(task: qs.common.task.BaseTask, ack: qs.common.types.AckFunction) -> None:
     logger.debug("Processing task...")
     logger.debug(f"Task type: {task.task_type}, Id: {task.task_id}")
 
@@ -63,4 +63,4 @@ def handler(task: BaseTask, ack: AckFunction) -> None:
 
 
 if __name__ == '__main__':
-    bootstrap(BootstrapArgs(host="localhost", handler_function=handler, logger=logger))
+    asyncio.run(bootstrap(BootstrapArgs(host="localhost", port=5672, handler_function=handler, logger=logger)))

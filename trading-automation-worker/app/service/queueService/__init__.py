@@ -1,16 +1,17 @@
-from .common.types import *
-from .common.task.BaseTask import *
-from .WorkQueueConsumer import WorkQueueConsumer
+import service.queueService.common as common
+import service.queueService.dataSource as dataSource
+from service.queueService.utils.TaskParser import TaskParser
+from service.queueService.ConsumerRepository import ConsumerRepository
+from service.queueService.IConsumerRepository import IConsumerRepository
+from service.queueService.IConsumer import IConsumer, ConsumerParameters, ConnectionParameters
 
 __all__ = [
-    Channel,
-    Connection,
-    Method,
-    Properties,
-    AckFunction,
-    Handler,
-    ExchangeType,
-    BaseTask,
-    TaskType,
-    WorkQueueConsumer
+    common,
+    dataSource,
+    TaskParser,
+    ConsumerRepository,
+    IConsumer,
+    ConsumerParameters,
+    ConnectionParameters,
+    IConsumerRepository
 ]

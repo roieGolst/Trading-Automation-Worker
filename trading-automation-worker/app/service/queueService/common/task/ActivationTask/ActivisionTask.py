@@ -1,10 +1,9 @@
-from abc import abstractmethod
 from typing import Any
 from uuid import UUID
 
 from typing_extensions import Self
 
-from service.queueService import BaseTask, TaskType
+from service.queueService.common.task import BaseTask, TaskType
 from service.queueService.common.task.BaseTask import Brokerage
 
 

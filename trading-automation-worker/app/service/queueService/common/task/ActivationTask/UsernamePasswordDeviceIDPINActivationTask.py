@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing_extensions import Self
 from uuid import UUID
 
-from service.queueService import Brokerage
+from service.queueService.common.task.BaseTask import Brokerage
 from service.queueService.common.task.ActivationTask.ActivisionTask import ActivationTask
 
 
