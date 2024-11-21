@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-from networkLayer.common.task import TaskType
-from networkLayer.common.types import Handler
+from data.model.task.types import Handler
 
-T = TypeVar('T')  # Define a generic type variable
+T = TypeVar('T')
 
 
-class INetworkDataSource(Generic[T], ABC):
+class ITaskFetcher(Generic[T], ABC):
     _connection_params: T
 
     @abstractmethod
@@ -23,5 +22,5 @@ class INetworkDataSource(Generic[T], ABC):
         pass
 
     @abstractmethod
-    def set_handler(self, key: TaskType, handler: Handler):
+    def set_handler(self, handler: Handler):
         pass

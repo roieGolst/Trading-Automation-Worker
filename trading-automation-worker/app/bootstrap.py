@@ -1,37 +1,37 @@
-import uuid
 from dataclasses import dataclass
-from logging import Logger
 from typing import Generic
 
-from networkLayer.NetworkLayer import NetworkLayer
-from networkLayer.INetworkDataSource import INetworkDataSource, T
+from data.ITaskFetcher import ITaskFetcher, T
+from data.model.task.Task import ActivationTask, DeactivationTask, TransactionTask
+from service.autoRsaService.EnvManager import EnvManager
+from taskFacade.TaskFacade import TaskFacade, TaskFacadeParameters, TaskHandlerInterface
+from useCase.ActivationUseCase import ActivationUseCase
+from useCase.IUseCase import IUseCase
 
 
-def on_act(task):
-    print(f"Activation task {task}")
+# TODO: move this file to dedicated folder
+class TaskHandler(TaskHandlerInterface):
+    def on_activation_task(self) -> IUseCase[ActivationTask]:
+        return ActivationUseCase(EnvManager(env_file_path="../env/.env"))
 
+    def on_deactivation_task(self) -> IUseCase[DeactivationTask]:
+        pass
 
-def on_deact(task):
-    print(f"Activation task {task}")
-
-
-def on_tra(task):
-    print(f"Activation task {task}")
+    def on_transaction_task(self) -> IUseCase[TransactionTask]:
+        pass
 
 
 @dataclass
 class BootstrapArgs(Generic[T]):
-    host: str
-    port: int
-    driver: INetworkDataSource[T]
-    logger: Logger
+    task_fetcher: ITaskFetcher[T]
 
 
-async def bootstrap(args: BootstrapArgs):
-    net = NetworkLayer(args.driver)
-    net.on_activation_task(on_act)
-    net.on_deactivation_task(on_deact)
-    net.on_transaction_task(on_tra)
+def bootstrap(args: BootstrapArgs):
+    task_facade: TaskFacade = TaskFacade.factory(
+        TaskFacadeParameters(
+            data_fetcher=args.task_fetcher,
+            facade_imp=TaskHandler()
+        )
+    )
 
-    net.init_connection()
-    net.listen()
+    task_facade.listen()

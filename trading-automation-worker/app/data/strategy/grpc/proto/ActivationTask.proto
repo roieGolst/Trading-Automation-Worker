@@ -1,0 +1,51 @@
+syntax = "proto3";
+import "types.proto";
+
+package Task.Activation;
+
+enum Brokerage {
+  BBAE = 0;
+  Chase = 1;
+  DSPAC = 2;
+  Fennel = 3;
+  Fidelity = 4;
+  Firstrade = 5;
+  Public = 6;
+  Robinhood = 7;
+  Schwab = 8;
+  SoFi = 9;
+  Tornado = 10;
+  Tradier = 11;
+  Tastytrade = 12;
+  Webull = 13;
+  Vanguard = 14;
+  WellsFargo = 15;
+}
+
+message ActivationCreds {
+  optional  string USERNAME = 1;
+	optional  string PASSWORD = 2;
+	optional  string EMAIL = 3;
+	optional  string ACCESS_TOKEN = 4;
+	optional  string TOTP_SECRET_OR_NA = 5;
+	optional  string TOTP_OR_NA = 6;
+	optional  string TOTP_SECRET = 7;
+	optional  string OTP = 8;
+	optional  string CELL_PHONE_LAST_FOUR = 9;
+	optional  string PHONE_LAST_FOUR = 10;
+	optional  string DEBUG = 11;
+	optional  string DID = 12;
+	optional  string TRADING_PIN = 13;
+}
+
+message Task {
+  Types.BaseTask base_task = 1;
+  Brokerage brokerage = 2;
+  ActivationCreds account_details = 3;
+}
+
+message Response {
+  Types.Status status = 1;
+  optional Types.UUID account_id = 2;
+  optional string message = 3;
+}

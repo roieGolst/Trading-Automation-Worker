@@ -5,8 +5,8 @@ cd "$(dirname "$0")/.." || {
   exit 1
 }
 
-cd app/networkLayer/dataSource/grpc || {
-  echo "Failed to navigate to app/service/networkService/dataSource/rpcService"
+cd app/data/strategy/grpc || {
+  echo "Failed to navigate to app/data/strategy/grpc"
   exit 1
 }
 

@@ -1,0 +1,15 @@
+syntax = "proto3";
+package Types;
+
+message BaseTask {
+  UUID task_id = 2;
+}
+
+message UUID {
+  string value = 1;
+}
+
+enum Status {
+  Success = 0;
+  Failure = 1;
+}

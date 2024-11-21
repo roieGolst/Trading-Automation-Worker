@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "types.proto";
+
+package Task.Deactivation;
+
+message Task {
+  Types.BaseTask base_task = 1;
+  Types.UUID account_id = 2;
+}
+
+message Response {
+  Types.Status status = 1;
+  optional string message = 2;
+}

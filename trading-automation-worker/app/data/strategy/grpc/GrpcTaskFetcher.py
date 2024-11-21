@@ -5,23 +5,22 @@ from logging import Logger
 import grpc
 from grpc._server import _Server
 
-from networkLayer.INetworkDataSource import INetworkDataSource
-from networkLayer.common.task import TaskType
-from networkLayer.common.types import Handler
-from networkLayer.dataSource.grpc.DefaultServicer import DefaultServicer, BaseServicer
-from networkLayer.dataSource.grpc.dist.myService_pb2_grpc import add_MyServiceServicer_to_server
+from data.ITaskFetcher import ITaskFetcher
+from data.model.task.types import Handler
+from data.strategy.grpc.DefaultServicer import DefaultServicer, BaseServicer
+from data.strategy.grpc.dist.myService_pb2_grpc import add_MyServiceServicer_to_server
 
 
 @dataclass
 class GrpcConnectionParams:
     creds: any
-    max_workers: int = field(default=10)
-    port: int = field(default=50051)
-    host: str = field(default="[::]")
+    port: int
+    host: str
+    max_workers: int = field(default=1)
     driver: BaseServicer = field(default=DefaultServicer())
 
 
-class GrpcDataSource(INetworkDataSource[GrpcConnectionParams]):
+class GrpcTaskFetcher(ITaskFetcher[GrpcConnectionParams]):
     _logger: Logger
     _server: _Server
     _driver: BaseServicer
@@ -46,5 +45,5 @@ class GrpcDataSource(INetworkDataSource[GrpcConnectionParams]):
         except Exception as err:
             self._logger.error(err)
 
-    def set_handler(self, key: TaskType, handler: Handler):
-        self._driver.set_handler(key, handler)
+    def set_handler(self, handler: Handler):
+        self._driver.set_handler(handler)
