@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "trading-automation"
+name = "trading-automation-worker"
 version = "0.1.0"
 description = ""
 authors = ["RoieGolst <roiegol9@gmail.com>"]
@@ -7,6 +7,11 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+typing-extensions = "^4.12.2"
+mypy-protobuf = "^3.6.0"
+grpcio = "^1.68.0"
+grpcio-tools = "^1.68.0"
+protoletariat = "^3.3.2"
 
 
 [build-system]
