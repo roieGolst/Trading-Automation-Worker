@@ -1,0 +1,12 @@
+syntax = "proto3";
+import "ActivationTask.proto";
+import "DeactivationTask.proto";
+import "TransactionTask.proto";
+
+package MyService;
+
+service MyService {
+  rpc Activation(Task.Activation.Task) returns (Task.Activation.Response);
+  rpc Deactivation(Task.Deactivation.Task) returns (Task.Deactivation.Response);
+  rpc Transaction(Task.Transaction.Task) returns (Task.Transaction.Response);
+}

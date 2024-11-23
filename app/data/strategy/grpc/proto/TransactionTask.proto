@@ -1,0 +1,21 @@
+syntax = "proto3";
+import "types.proto";
+
+package Task.Transaction;
+
+enum TransactionMethod {
+  Sell = 0;
+  Buy = 1;
+}
+
+message Task {
+  Types.BaseTask base_task = 1;
+  TransactionMethod method = 2;
+  int32 amount = 3;
+  string ticker = 4;
+}
+
+message Response {
+  Types.Status status = 1;
+  optional string message = 2;
+}
