@@ -1,6 +1,19 @@
+from abc import ABC, abstractmethod
+
 from data.model.task.Task import Task, TaskType
 from data.model.task.types import Response
 from useCase.IUseCase import IUseCase
+
+
+class IRouter(ABC):
+    @abstractmethod
+    def set_task_performer(self, task_type: TaskType, performer: IUseCase[Task], force: bool = False):
+        pass
+
+
+    @abstractmethod
+    def perform_task(self, task_type: TaskType, task: Task) -> Response:
+        pass
 
 
 class Router:

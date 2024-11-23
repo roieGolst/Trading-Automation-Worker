@@ -4,7 +4,7 @@ from data.model.task.Task import Task
 from data.model.task.types import Handler, Response
 
 
-class TaskEmitter(ITaskEmitter):
+class DefaultTaskEmitter(ITaskEmitter):
     _driver: ITaskFetcher
 
     def __init__(self, driver: ITaskFetcher):

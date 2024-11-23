@@ -2,14 +2,14 @@ from uuid import UUID
 
 from data.model.task.Task import Task, Brokerage, TransactionMethod
 from data.model.task.types import Handler, Response, Status
-from data.strategy.grpc.dist import types_pb2 as grpc_types
-from data.strategy.grpc.dist import ActivationTask_pb2 as GrpcActivationTask
-from data.strategy.grpc.dist import DeactivationTask_pb2 as GrpcDeactivationTask
-from data.strategy.grpc.dist import DeactivationTask_pb2 as GrpcTransactionTask
-from data.strategy.grpc.dist.myService_pb2_grpc import MyServiceServicer
+from data.strategy.grpc.dist_worker import types_pb2 as grpc_types
+from data.strategy.grpc.dist_worker import ActivationTask_pb2 as GrpcActivationTask
+from data.strategy.grpc.dist_worker import DeactivationTask_pb2 as GrpcDeactivationTask
+from data.strategy.grpc.dist_worker import DeactivationTask_pb2 as GrpcTransactionTask
+from data.strategy.grpc.dist_worker.WorkerTradingService_pb2_grpc import WorkerTradingServiceServicer
 
 
-class BaseServicer(MyServiceServicer):
+class BaseServicer(WorkerTradingServiceServicer):
     _handler: Handler[Task, Response]
 
     def __init__(self):

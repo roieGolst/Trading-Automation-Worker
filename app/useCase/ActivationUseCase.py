@@ -3,7 +3,7 @@ from uuid import UUID
 
 from data.model.task.Task import Brokerage, ActivationTask
 from data.model.task.types import Response, Status
-from service.autoRsaService.EnvManager import EnvManager
+from services.autoRsaService.EnvManager import EnvManager
 from useCase.IUseCase import IUseCase
 
 

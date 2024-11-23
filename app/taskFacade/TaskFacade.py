@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing_extensions import Self
 
 from common.IFactory import IFactory
-from data.TaskEmitter import TaskEmitter
+from data.DefaultTaskEmitter import DefaultTaskEmitter
 from data.ITaskFetcher import ITaskFetcher
 from data.ITaskEmitter import ITaskEmitter
 from data.model.task.Task import Task, ActivationTask, DeactivationTask, TransactionTask, TaskType
@@ -47,7 +47,7 @@ class TaskFacade(IFactory[TaskFacadeParameters, Self]):
 
     @staticmethod
     def factory(params: TaskFacadeParameters):
-        data_repo = TaskEmitter(params.data_fetcher)
+        data_repo = DefaultTaskEmitter(params.data_fetcher)
         router = Router()
 
         router.set_task_performer(TaskType.Activation, params.facade_imp.on_activation_task())
