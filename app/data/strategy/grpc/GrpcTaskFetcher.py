@@ -1,4 +1,3 @@
-import socket
 from concurrent import futures
 from dataclasses import dataclass, field
 from logging import Logger
@@ -47,26 +46,26 @@ class GrpcTaskFetcher(ITaskFetcher[GrpcConnectionParams]):
 
     def listen(self):
         self._logger.info(f"Staring gRPC Server on {self._connection_params.host}:{self._connection_params.port}")
-        try:
-            self._server.start()
-            self._logger.info(f"gRPC Server is running on port {self._connection_params.port}...")
-            self.connect_to_main_server()
-            self._server.wait_for_termination()
-
-        except Exception as err:
-            self._logger.error(err)
+        self._server.start()
+        self._logger.info(f"gRPC Server is running on port {self._connection_params.port}...")
+        self.connect_to_main_server()
+        self._server.wait_for_termination()
 
     def connect_to_main_server(self):
-        # TODO: If client should pass IP for main server, if so find out best way to get machine public IP address
-        with grpc.insecure_channel(f'{self._main_server_host}:{self._main_server_port}') as channel:
-            stub = MainTradingServiceStub(channel)
-            # TODO: Turns out this is not this is not public IP address
-            return_to = f"{socket.gethostbyname(socket.gethostname())}:{self._connection_params.port}"
-            stub.ping(Ping(
-                ip=f"{return_to}"
-            ))
+        try:
+            main_server_host = f'{self._main_server_host}:{self._main_server_port}'
+            self._logger.debug(f"Trying to connect to main server for ping communication "
+                               f"Server host: {main_server_host}")
+            with grpc.insecure_channel(main_server_host) as channel:
+                stub = MainTradingServiceStub(channel)
+                stub.ping(Ping(return_to_port=self._connection_params.port))
 
-        self._logger.info(f"Successfully connect to main server for ping communication")
+            self._logger.info("Successfully connected to main server for ping communication")
+        except grpc.RpcError as rpc_error:
+            self._logger.error(f"gRPC Error: Ping/Pong Commnucation with main server failed!\n"
+                               f"Main Server Error: {rpc_error}")
+            raise RuntimeError(f"gRPC Error: Ping/Pong Commnucation with main server failed!\n"
+                               f"Main Server Error: {rpc_error}")
 
     def set_handler(self, handler: Handler):
         self._driver.set_handler(handler)

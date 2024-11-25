@@ -5,7 +5,7 @@ from data.model.task.types import Handler, Response, Status
 from data.strategy.grpc.dist_worker import types_pb2 as grpc_types
 from data.strategy.grpc.dist_worker import ActivationTask_pb2 as GrpcActivationTask
 from data.strategy.grpc.dist_worker import DeactivationTask_pb2 as GrpcDeactivationTask
-from data.strategy.grpc.dist_worker import DeactivationTask_pb2 as GrpcTransactionTask
+from data.strategy.grpc.dist_worker import TransactionTask_pb2 as GrpcTransactionTask
 from data.strategy.grpc.dist_worker.WorkerTradingService_pb2_grpc import WorkerTradingServiceServicer
 
 

@@ -11,8 +11,8 @@ class TaskType(Enum):
 
 
 class TransactionMethod(Enum):
-    Sell = "Sell"
-    Buy = "Buy"
+    Sell = "sell"
+    Buy = "buy"
 
 
 class Brokerage(IntEnum):
@@ -35,7 +35,6 @@ class Brokerage(IntEnum):
 
 
 class Task(ABC):
-    # TODO: Consider to remove this taskType
     task_type: TaskType
     task_id: UUID
 
