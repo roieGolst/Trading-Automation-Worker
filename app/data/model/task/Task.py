@@ -1,4 +1,5 @@
 from abc import ABC
+from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import Any
 from uuid import UUID
@@ -129,3 +130,22 @@ class _TransactionTask(Task):
 ActivationTask = _ActivationTask
 DeactivationTask = _DeactivationTask
 TransactionTask = _ActivationTask
+
+
+@dataclass
+class ActivationResponse:
+    account_id: str
+
+
+@dataclass
+class DeactivationResponse:
+    # Added if needed
+    pass
+
+
+@dataclass
+class TransactionResponse:
+    # Added if needed
+    pass
+
+

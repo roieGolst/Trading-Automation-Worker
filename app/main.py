@@ -4,6 +4,7 @@ from bootstrap import bootstrap, BootstrapArgs
 from logger import logger
 
 from data.strategy.grpc.GrpcTaskFetcher import GrpcConnectionParams, GrpcTaskFetcher
+from services.autoRsaService.AutoRSAService import AutoRSAService
 from taskFacade.DefaultTaskHandler import DefaultTaskHandler
 
 
@@ -25,7 +26,7 @@ if __name__ == '__main__':
         logger
     )
 
-    task_handler = DefaultTaskHandler(str(ENV_PATH_DIR))
+    task_handler = DefaultTaskHandler(AutoRSAService(str(ENV_PATH_DIR)))
     bootstrap(args=BootstrapArgs[GrpcTaskFetcher](
         task_fetcher=task_fetcher,
         task_handler=task_handler

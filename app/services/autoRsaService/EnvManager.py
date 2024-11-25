@@ -40,12 +40,12 @@ class EnvManager:
         self.env_file_path = env_file_path
         self.env_vars = {}
         self.accounts = {}
-        self.load_env_file()
-        self.remove_discord_vars()
-        self.set_danger_mode()
-        self.sync_accounts_to_env()
+        self._load_env_file()
+        self._remove_discord_vars()
+        self._set_danger_mode()
+        self._sync_accounts_to_env()
 
-    def load_env_file(self):
+    def _load_env_file(self):
         """
         Load existing environment variables from the .env file.
         """
@@ -68,7 +68,7 @@ class EnvManager:
                 value = value.strip()
                 self.env_vars[key] = value
 
-    def remove_discord_vars(self):
+    def _remove_discord_vars(self):
         """
         Remove all Discord-related variables from the environment variables.
         """
@@ -76,7 +76,7 @@ class EnvManager:
             if var in self.env_vars:
                 del self.env_vars[var]
 
-    def set_danger_mode(self):
+    def _set_danger_mode(self):
         """
         Ensure DANGER_MODE is set to "true" by default.
         """
@@ -111,11 +111,11 @@ class EnvManager:
             'id': str(account_id),
             'details': account_details
         })
-        self.sync_accounts_to_env()
-        self.write_env_file()
+        self._sync_accounts_to_env()
+        self._write_env_file()
         return account_id
 
-    def remove_account(self, account_id):
+    def remove_account(self, account_id: uuid.UUID):
         """
         Remove an account using its unique ID.
 
@@ -136,12 +136,12 @@ class EnvManager:
                 # If the brokerage has no more accounts, remove it
                 if not accounts:
                     del self.accounts[broker_name]
-                self.sync_accounts_to_env()
+                self._sync_accounts_to_env()
                 break
-        self.write_env_file()
+        self._write_env_file()
         return found
 
-    def sync_accounts_to_env(self):
+    def _sync_accounts_to_env(self):
         """
         Sync accounts from in-memory storage to environment variables.
         """
@@ -159,13 +159,13 @@ class EnvManager:
                 for acc in accounts:
                     details = acc['details']
                     # Convert details dict into string
-                    account_str = self.serialize_account_details(broker_name, details)
+                    account_str = self._serialize_account_details(broker_name, details)
                     account_strings.append(account_str)
                 # Combine all account strings into a single string
                 accounts_str = ','.join(account_strings)
                 self.env_vars[env_var] = f'"{accounts_str}"'
 
-    def serialize_account_details(self, broker_name, details: dict) -> str:
+    def _serialize_account_details(self, broker_name, details: dict) -> str:
         """
         Serialize account details dict into the string format required for the .env file.
 
@@ -210,7 +210,7 @@ class EnvManager:
         account_str = ':'.join(field_values)
         return account_str
 
-    def write_env_file(self):
+    def _write_env_file(self):
         """
         Write the current environment variables back to the .env file without comments.
         """
