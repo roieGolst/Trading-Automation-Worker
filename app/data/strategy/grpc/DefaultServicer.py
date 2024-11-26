@@ -73,7 +73,7 @@ class DefaultServicer(BaseServicer):
         try:
             result: Response = self._handler(Task.Transaction(
                 task_id=UUID(request.base_task.task_id.value),
-                method=TransactionMethod[request.method],
+                method=TransactionMethod(request.method),
                 amount=request.amount,
                 ticker=request.ticker
             ))
