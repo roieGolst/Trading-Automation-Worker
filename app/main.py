@@ -7,8 +7,9 @@ from data.strategy.grpc.GrpcTaskFetcher import GrpcConnectionParams, GrpcTaskFet
 from services.autoRsaService.AutoRSAService import AutoRSAService
 from taskFacade.DefaultTaskHandler import DefaultTaskHandler
 
-
-ENV_PATH_DIR = pathlib.Path("../env/.env").resolve()
+AUTORSA_PATH_DIR = pathlib.Path("../lib/auto-rsa").resolve()
+AUTORSA_CLI_PATH = pathlib.Path(AUTORSA_PATH_DIR, "autoRSA.py").resolve()
+ENV_PATH = pathlib.Path(AUTORSA_PATH_DIR, ".env").resolve()
 CONFIGS_PATH_DIR = pathlib.Path("../configs/app.json").resolve()
 
 if __name__ == '__main__':
@@ -26,7 +27,13 @@ if __name__ == '__main__':
         logger
     )
 
-    task_handler = DefaultTaskHandler(AutoRSAService(str(ENV_PATH_DIR)))
+    task_handler = DefaultTaskHandler(
+        AutoRSAService(
+            cli_binary_path= str(AUTORSA_CLI_PATH),
+            env_file_path=str(ENV_PATH)
+        )
+    )
+
     bootstrap(args=BootstrapArgs[GrpcTaskFetcher](
         task_fetcher=task_fetcher,
         task_handler=task_handler

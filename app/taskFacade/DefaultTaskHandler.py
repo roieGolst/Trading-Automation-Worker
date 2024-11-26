@@ -3,6 +3,7 @@ from services.autoRsaService.AutoRSAService import AutoRSAService
 from taskFacade.TaskFacade import TaskHandlerInterface
 from useCase.ActivationUseCase import ActivationUseCase
 from useCase.DeactivationTask import DeactivationUseCase
+from useCase.TransactionUseCase import TransactionUseCase
 from useCase.IUseCase import IUseCase
 
 
@@ -19,4 +20,4 @@ class DefaultTaskHandler(TaskHandlerInterface):
         return DeactivationUseCase(self._auto_rsa)
 
     def on_transaction_task(self) -> IUseCase[TransactionTask]:
-        pass
+        return TransactionUseCase(self._auto_rsa)

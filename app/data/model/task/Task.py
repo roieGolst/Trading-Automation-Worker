@@ -11,9 +11,9 @@ class TaskType(Enum):
     Transaction = "transaction"
 
 
-class TransactionMethod(Enum):
-    Sell = "sell"
-    Buy = "buy"
+class TransactionMethod(IntEnum):
+    Sell = 0
+    Buy = 1
 
 
 class Brokerage(IntEnum):
@@ -129,7 +129,7 @@ class _TransactionTask(Task):
 
 ActivationTask = _ActivationTask
 DeactivationTask = _DeactivationTask
-TransactionTask = _ActivationTask
+TransactionTask = _TransactionTask
 
 
 @dataclass
