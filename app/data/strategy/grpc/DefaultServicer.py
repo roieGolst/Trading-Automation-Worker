@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from data.model.task.Task import Task, Brokerage, TransactionMethod, ActivationResponse
+from data.model.task.Task import Task, Brokerage, TransactionMethod, ActivationResponse, TransactionResponse
 from data.model.task.types import Handler, Response
 from data.strategy.grpc.dist_worker import types_pb2 as grpc_types
 from data.strategy.grpc.dist_worker import ActivationTask_pb2 as GrpcActivationTask
@@ -90,7 +90,8 @@ class DefaultServicer(BaseServicer):
                 message=result.error
             )
 
+        result: Response[TransactionResponse]
         return GrpcDeactivationTask.Response(
             status=grpc_types.Status.Success,
-            message="Transaction preformed"
+            message=result.value
         )

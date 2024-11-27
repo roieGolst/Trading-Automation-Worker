@@ -1,6 +1,6 @@
 from data.model.task.Task import TransactionTask
 from data.model.task.types import Response
-from data.strategy.grpc.DefaultServicer import ActivationResponse
+from data.model.task.Task import TransactionResponse
 from services.autoRsaService.AutoRSAService import AutoRSAService
 from useCase.IUseCase import IUseCase
 
@@ -13,13 +13,22 @@ class TransactionUseCase(IUseCase[TransactionTask]):
 
     def perform(self, data: TransactionTask) -> Response:
         try:
-            self._auto_rsa.transaction(
+            result: Response = self._auto_rsa.transaction(
                 method=data.transaction_method,
                 ticker=data.ticker,
                 amount=data.amount
             )
 
-            return Response[ActivationResponse](success=True ,value=ActivationResponse(account_id))
+            if not result.success:
+                return result
+
+            return Response[TransactionResponse](
+                success=True,
+                value=TransactionResponse(
+                    stdout=result.value
+                )
+            )
+
         except Exception as err:
             return Response(
                 success=False,

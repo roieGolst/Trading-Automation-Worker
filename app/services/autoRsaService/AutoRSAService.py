@@ -1,15 +1,16 @@
+import os
 import shutil
 import subprocess
-import sys
 from uuid import UUID
 
 from data.model.task.Task import Brokerage, TransactionMethod
+from data.model.task.types import Response
 from services.autoRsaService.EnvManager import EnvManager
 
 
 class AutoRSAService:
 
-    def __init__(self,cli_binary_path: str,  env_file_path: str, python_version: str = "3.12"):
+    def __init__(self, cli_binary_path: str,  env_file_path: str, python_version: str = "3.12"):
         self._env_manager = EnvManager(env_file_path)
         self._cli_path = cli_binary_path
 
@@ -23,7 +24,6 @@ class AutoRSAService:
             )
             self.python_path = result.stdout.strip()
         except subprocess.CalledProcessError:
-            # Fallback to `which` if pyenv is not used
             self.python_path = shutil.which(f"python{python_version}")
             if not self.python_path:
                 raise RuntimeError(f"Python {python_version} is not available.")
@@ -46,31 +46,35 @@ class AutoRSAService:
         })[method]
 
         args = [str_method, str(amount), ticker, "all", "false"]
-        self.run_cli_command(self._cli_path, *args)
+        return self.run_cli_command(self._cli_path, *args)
 
-    def run_cli_command(self, command, *args):
+    def run_cli_command(self, command, *args) -> Response:
         try:
             full_command = [self.python_path, command] + list(args);
+            script_path = full_command[1]  # The path to `autoRSA.py`
+            working_directory = os.path.dirname(script_path)
 
             result = subprocess.run(
                 full_command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                check=True
+                check=True,
+                cwd=working_directory
+            )
+            return Response(
+                success=True,
+                value=result.stdout
             )
 
-            print("Command output:")
-            print(result.stdout)
-            return result.stdout
-
         except subprocess.CalledProcessError as e:
-            print(f"Error running command '{command}': {e.stdout}", file=sys.stderr)
-            sys.exit(e.returncode)
-
-        except FileNotFoundError:
-            print(f"Command '{command}' not found. Is it installed and in your PATH?", file=sys.stderr)
-            sys.exit(1)
+            return Response(
+                success=False,
+                error=f"Error running autoRSA cli tool '{command}': {e.stdout}"
+            )
 
         except Exception as err:
-            print(err)
+            return Response(
+                success=False,
+                error=f"Error running autoRSA cli tool {err}"
+            )

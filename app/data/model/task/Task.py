@@ -145,7 +145,6 @@ class DeactivationResponse:
 
 @dataclass
 class TransactionResponse:
-    # Added if needed
-    pass
+    stdout: str
 
 
