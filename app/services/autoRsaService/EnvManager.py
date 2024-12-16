@@ -24,6 +24,25 @@ BROKERAGES = {
     'WellsFargo': 'WELLSFARGO',
 }
 
+broker_fields = {
+    'BBAE': ['USERNAME', 'PASSWORD'],
+    'Chase': ['USERNAME', 'PASSWORD', 'PHONE_LAST_FOUR', 'DEBUG'],
+    'DSPAC': ['USERNAME', 'PASSWORD'],
+    'Fennel': ['EMAIL'],
+    'Fidelity': ['USERNAME', 'PASSWORD', 'TOTP_SECRET_OR_NA'],
+    'Firstrade': ['USERNAME', 'PASSWORD', 'OTP'],
+    'Public': ['USERNAME', 'PASSWORD'],
+    'Robinhood': ['USERNAME', 'PASSWORD', 'TOTP_OR_NA'],
+    'Schwab': ['USERNAME', 'PASSWORD', 'TOTP_SECRET_OR_NA'],
+    'SoFi': ['USERNAME', 'PASSWORD', 'TOTP_SECRET'],
+    'Tastytrade': ['USERNAME', 'PASSWORD'],
+    'Tornado': ['EMAIL', 'PASSWORD'],
+    'Tradier': ['ACCESS_TOKEN'],
+    'Vanguard': ['USERNAME', 'PASSWORD', 'PHONE_LAST_FOUR', 'DEBUG'],
+    'Webull': ['USERNAME', 'PASSWORD', 'DID', 'TRADING_PIN'],
+    'WellsFargo': ['USERNAME', 'PASSWORD', 'PHONE_LAST_FOUR'],
+}
+
 
 class EnvManager:
     __INSTANCE: Self = None
@@ -99,13 +118,10 @@ class EnvManager:
         if broker_name not in self.accounts:
             self.accounts[broker_name] = []
 
-        # Check for duplicate account_details
         for account in self.accounts[broker_name]:
             if account['details'] == account_details:
-                print(f"Account already exists for broker '{broker_name}'.")
                 return uuid.UUID(account['id'])  # Return existing account ID
 
-        # If no duplicate found, add new account
         account_id = uuid.uuid4()
         self.accounts[broker_name].append({
             'id': str(account_id),
@@ -176,31 +192,10 @@ class EnvManager:
         Returns:
         - str: Serialized account details string.
         """
-        # Define the required fields for each broker in order
-        broker_fields = {
-            'BBAE': ['USERNAME', 'PASSWORD'],
-            'Chase': ['USERNAME', 'PASSWORD', 'PHONE_LAST_FOUR', 'DEBUG'],
-            'DSPAC': ['USERNAME', 'PASSWORD'],
-            'Fennel': ['EMAIL'],
-            'Fidelity': ['USERNAME', 'PASSWORD', 'TOTP_SECRET_OR_NA'],
-            'Firstrade': ['USERNAME', 'PASSWORD', 'OTP'],
-            'Public': ['USERNAME', 'PASSWORD'],
-            'Robinhood': ['USERNAME', 'PASSWORD', 'TOTP_OR_NA'],
-            'Schwab': ['USERNAME', 'PASSWORD', 'TOTP_SECRET_OR_NA'],
-            'SoFi': ['USERNAME', 'PASSWORD', 'TOTP_SECRET'],
-            'Tastytrade': ['USERNAME', 'PASSWORD'],
-            'Tornado': ['EMAIL', 'PASSWORD'],
-            'Tradier': ['ACCESS_TOKEN'],
-            'Vanguard': ['USERNAME', 'PASSWORD', 'PHONE_LAST_FOUR', 'DEBUG'],
-            'Webull': ['USERNAME', 'PASSWORD', 'DID', 'TRADING_PIN'],
-            'WellsFargo': ['USERNAME', 'PASSWORD', 'PHONE_LAST_FOUR'],
-        }
-
         fields = broker_fields.get(broker_name)
         if not fields:
             raise ValueError(f"Broker '{broker_name}' is not supported for serialization.")
 
-        # Build the account string by joining the fields with ':'
         field_values = []
         for field in fields:
             value = details.get(field)
@@ -215,6 +210,5 @@ class EnvManager:
         Write the current environment variables back to the .env file without comments.
         """
         with open(self.env_file_path, 'w') as file:
-            # Write environment variables
             for key, value in self.env_vars.items():
                 file.write(f'{key}={value}\n')

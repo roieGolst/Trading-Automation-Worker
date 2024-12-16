@@ -45,7 +45,6 @@ class Task(ABC):
 
     @staticmethod
     def Activation(task_id: UUID, brokerage: Brokerage, creds: Any):
-
         return _ActivationTask(task_id, brokerage, creds)
 
     @staticmethod

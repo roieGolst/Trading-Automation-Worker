@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from data.model.task.Task import Task, Brokerage, TransactionMethod, ActivationResponse, TransactionResponse
-from data.model.task.types import Handler, Response
+from data.model.task.types import Handler, Response, S
 from data.strategy.grpc.dist_worker import types_pb2 as grpc_types
 from data.strategy.grpc.dist_worker import ActivationTask_pb2 as GrpcActivationTask
 from data.strategy.grpc.dist_worker import DeactivationTask_pb2 as GrpcDeactivationTask
@@ -10,19 +10,19 @@ from data.strategy.grpc.dist_worker.WorkerTradingService_pb2_grpc import WorkerT
 
 
 class BaseServicer(WorkerTradingServiceServicer):
-    _handler: Handler[Task, Response]
+    _handler: Handler[Task, S]
 
     def __init__(self):
         super().__init__()
 
-    def set_handler(self, handler_fun: Handler[Task, Response]):
+    def set_handler(self, handler_fun: Handler[Task, S]):
         self._handler = handler_fun
 
 
 class DefaultServicer(BaseServicer):
     def Activation(self, request: GrpcActivationTask.Task, context):
         try:
-            response: Response = self._handler(Task.Activation(
+            response: Response[ActivationResponse] = self._handler(Task.Activation(
                 task_id=UUID(request.base_task.task_id.value),
                 brokerage=Brokerage(request.brokerage),
                 creds=request.account_details
@@ -71,7 +71,7 @@ class DefaultServicer(BaseServicer):
 
     def Transaction(self, request: GrpcTransactionTask.Task, context):
         try:
-            result: Response = self._handler(Task.Transaction(
+            result: Response[TransactionResponse] = self._handler(Task.Transaction(
                 task_id=UUID(request.base_task.task_id.value),
                 method=TransactionMethod(request.method),
                 amount=request.amount,
@@ -93,5 +93,5 @@ class DefaultServicer(BaseServicer):
         result: Response[TransactionResponse]
         return GrpcDeactivationTask.Response(
             status=grpc_types.Status.Success,
-            message=result.value
+            message=result.value.stdout
         )

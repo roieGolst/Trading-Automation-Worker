@@ -10,9 +10,9 @@ from services.autoRsaService.EnvManager import EnvManager
 
 class AutoRSAService:
 
-    def __init__(self, cli_binary_path: str,  env_file_path: str, python_version: str = "3.12"):
+    def __init__(self, dir_path: str, env_file_path: str, python_version: str = "3.12"):
+        self._dir_path = dir_path
         self._env_manager = EnvManager(env_file_path)
-        self._cli_path = cli_binary_path
 
         try:
             result = subprocess.run(
@@ -23,6 +23,7 @@ class AutoRSAService:
                 check=True
             )
             self.python_path = result.stdout.strip()
+
         except subprocess.CalledProcessError:
             self.python_path = shutil.which(f"python{python_version}")
             if not self.python_path:
@@ -46,25 +47,34 @@ class AutoRSAService:
         })[method]
 
         args = [str_method, str(amount), ticker, "all", "false"]
-        return self.run_cli_command(self._cli_path, *args)
+        result = self.run_cli_command(args)
+        return result
 
-    def run_cli_command(self, command, *args) -> Response:
+    def run_cli_command(self, args: list) -> Response:
         try:
-            full_command = [self.python_path, command] + list(args);
-            script_path = full_command[1]  # The path to `autoRSA.py`
-            working_directory = os.path.dirname(script_path)
+            script_path = f"{self._dir_path}/scripts/run_autoRSA.sh"
+            full_command = [script_path] + args
 
-            result = subprocess.run(
+            process = subprocess.Popen(
                 full_command,
+                cwd=self._dir_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True,
-                check=True,
-                cwd=working_directory
+                text=True
             )
+
+            stdout, stderr = process.communicate()
+
+            if process.returncode != 0:
+                return Response(
+                    success=False,
+                    error=f"Error running autoRSA cli tool '{full_command}': {stderr.strip()}"
+                )
+
+            # Process succeeded
             return Response(
                 success=True,
-                value=result.stdout
+                value=stdout.strip()
             )
 
         except subprocess.CalledProcessError as e:
