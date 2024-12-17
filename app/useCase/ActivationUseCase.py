@@ -18,12 +18,13 @@ class ActivationUseCase(IUseCase[ActivationTask]):
     def perform(self, data: ActivationTask) -> Response:
         self._logger.debug(f"Perform activation task; id: {data.task_id}")
         try:
-            account_id = self._auto_rsa.activation(
+            res = self._auto_rsa.activation(
+                account_name=data.account_name,
                 brokerage=data.brokerage,
                 account_details=data.cred
             )
 
-            return Response[ActivationResponse](success=True, value=ActivationResponse(account_id))
+            return Response[ActivationResponse](success=True, value=ActivationResponse(res))
         except Exception as err:
             return Response(
                 success=False,

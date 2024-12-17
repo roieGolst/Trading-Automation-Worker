@@ -29,8 +29,12 @@ class AutoRSAService:
             if not self.python_path:
                 raise RuntimeError(f"Python {python_version} is not available.")
 
-    def activation(self, brokerage: Brokerage, account_details: dict):
-        return self._env_manager.add_account(broker_name=brokerage.name, account_details=account_details)
+    def activation(self, account_name: str, brokerage: Brokerage, account_details: dict) -> bool:
+        return self._env_manager.add_account(
+            account_name=account_name,
+            broker_name=brokerage.name,
+            account_details=account_details
+        )
 
     def deactivation(self, account_id: UUID):
         return self._env_manager.remove_account(account_id)
@@ -80,7 +84,7 @@ class AutoRSAService:
         except subprocess.CalledProcessError as e:
             return Response(
                 success=False,
-                error=f"Error running autoRSA cli tool '{command}': {e.stdout}"
+                error=f"Error running autoRSA cli tool: {e.stdout}"
             )
 
         except Exception as err:

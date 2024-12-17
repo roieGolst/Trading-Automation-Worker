@@ -24,6 +24,7 @@ class DefaultServicer(BaseServicer):
         try:
             response: Response[ActivationResponse] = self._handler(Task.Activation(
                 task_id=UUID(request.base_task.task_id.value),
+                account_name=request.account_name,
                 brokerage=Brokerage(request.brokerage),
                 creds=request.account_details
             ))
@@ -36,8 +37,7 @@ class DefaultServicer(BaseServicer):
 
             response: Response[ActivationResponse]
             return GrpcActivationTask.Response(
-                status=grpc_types.Status.Success,
-                account_id=grpc_types.UUID(value=str(response.value.account_id))
+                status=grpc_types.Status.Success
             )
         except Exception as err:
             return GrpcActivationTask.Response(

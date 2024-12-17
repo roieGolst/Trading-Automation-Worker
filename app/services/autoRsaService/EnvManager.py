@@ -1,6 +1,5 @@
 import os
 import threading
-import uuid
 
 from typing_extensions import Self
 
@@ -69,7 +68,6 @@ class EnvManager:
         Load existing environment variables from the .env file.
         """
         if not os.path.exists(self.env_file_path):
-            # Initialize empty if file doesn't exist
             return
 
         with open(self.env_file_path, 'r') as file:
@@ -78,7 +76,6 @@ class EnvManager:
         for line in lines:
             stripped = line.strip()
             if not stripped or stripped.startswith('#'):
-                # Skip comments and empty lines
                 continue
 
             if '=' in line:
@@ -101,16 +98,17 @@ class EnvManager:
         """
         self.env_vars['DANGER_MODE'] = '"true"'
 
-    def add_account(self, broker_name, account_details: dict) -> uuid.UUID:
+    def add_account(self, broker_name, account_name: str, account_details: dict) -> bool:
         """
-        Add an account for a given brokerage.
+        Add an account for a given brokerage by account name.
 
         Parameters:
         - broker_name (str): Name of the brokerage (e.g., 'Robinhood').
+        - account_name (str): The name of the account.
         - account_details (dict): Account credentials as a dictionary.
 
         Returns:
-        - uuid.UUID: The unique ID assigned to the account.
+        - bool: True if the account was added, False if an account with the same name already exists.
         """
         if broker_name not in BROKERAGES:
             raise ValueError(f"Broker '{broker_name}' is not supported.")
@@ -118,79 +116,72 @@ class EnvManager:
         if broker_name not in self.accounts:
             self.accounts[broker_name] = []
 
+        # Check if the account name already exists
         for account in self.accounts[broker_name]:
-            if account['details'] == account_details:
-                return uuid.UUID(account['id'])  # Return existing account ID
+            if account['name'] == account_name:
+                return False  # Account already exists
 
-        account_id = uuid.uuid4()
+        # Add new account
         self.accounts[broker_name].append({
-            'id': str(account_id),
+            'name': account_name,
             'details': account_details
         })
+
         self._sync_accounts_to_env()
         self._write_env_file()
-        return account_id
+        return True
 
-    def remove_account(self, account_id: uuid.UUID):
+    def remove_account(self, account_name: str, broker_name: str) -> bool:
         """
-        Remove an account using its unique ID.
+        Remove an account using its account name and brokerage.
 
         Parameters:
-        - account_id (uuid.UUID): The unique ID of the account to remove.
+        - account_name (str): The name of the account to remove.
+        - broker_name (str): The brokerage of the account.
 
         Returns:
         - bool: True if the account was removed, False if not found.
         """
-        found = False
-        for broker_name, accounts in list(self.accounts.items()):
-            for account in accounts:
-                if account['id'] == str(account_id):
-                    accounts.remove(account)
-                    found = True
-                    break  # Account ID is unique, so we can break here
-            if found:
-                # If the brokerage has no more accounts, remove it
-                if not accounts:
+        if broker_name not in self.accounts:
+            return False
+
+        for account in self.accounts[broker_name]:
+            if account['name'] == account_name:
+                self.accounts[broker_name].remove(account)
+                if not self.accounts[broker_name]:
                     del self.accounts[broker_name]
                 self._sync_accounts_to_env()
-                break
-        self._write_env_file()
-        return found
+                self._write_env_file()
+                return True
+
+        return False
 
     def _sync_accounts_to_env(self):
         """
         Sync accounts from in-memory storage to environment variables.
         """
-        # Clear existing brokerage env_vars
         for env_var in BROKERAGES.values():
             if env_var in self.env_vars:
                 del self.env_vars[env_var]
 
-        # Add current accounts
         for broker_name, accounts in self.accounts.items():
             env_var = BROKERAGES.get(broker_name)
             if env_var:
-                # Serialize account details into strings
                 account_strings = []
                 for acc in accounts:
                     details = acc['details']
-                    # Convert details dict into string
                     account_str = self._serialize_account_details(broker_name, details)
                     account_strings.append(account_str)
-                # Combine all account strings into a single string
-                accounts_str = ','.join(account_strings)
-                self.env_vars[env_var] = f'"{accounts_str}"'
+                existing_value = self.env_vars.get(env_var, "")
+                combined_value = ','.join(account_strings)
+                if existing_value:
+                    self.env_vars[env_var] = f'"{existing_value},{combined_value}"'
+                else:
+                    self.env_vars[env_var] = f'"{combined_value}"'
 
     def _serialize_account_details(self, broker_name, details: dict) -> str:
         """
         Serialize account details dict into the string format required for the .env file.
-
-        Parameters:
-        - broker_name (str): Name of the brokerage.
-        - details (dict): Account details dictionary.
-
-        Returns:
-        - str: Serialized account details string.
         """
         fields = broker_fields.get(broker_name)
         if not fields:
@@ -202,8 +193,7 @@ class EnvManager:
             if value is None:
                 raise ValueError(f"Missing field '{field}' for broker '{broker_name}'.")
             field_values.append(value)
-        account_str = ':'.join(field_values)
-        return account_str
+        return ':'.join(field_values)
 
     def _write_env_file(self):
         """
