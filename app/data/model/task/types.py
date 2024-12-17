@@ -1,6 +1,6 @@
+from typing import Callable, Generic, TypeVar, Optional
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, TypeVar
 
 
 class Status(Enum):
@@ -8,14 +8,21 @@ class Status(Enum):
     Failure = "Failure"
 
 
-# TODO: Think about it more
+T = TypeVar("T")
+S = TypeVar("S")
+
+
 @dataclass
-class Response:
-    status: Status
-    metadata: dict
+class Response(Generic[S]):
+    success: bool
+    value: Optional[S] = None
+    error: Optional[str] = None
+
+    def __post_init__(self):
+        if self.success and self.error is not None:
+            raise ValueError("Response cannot be successful and contain an error.")
+        if not self.success and self.value is not None:
+            raise ValueError("Response cannot be unsuccessful and contain a value.")
 
 
-T = TypeVar('T', bound='BaseTask')
-R = TypeVar('R', bound="Response")
-
-Handler = Callable[[T], R]
+Handler = Callable[[T], Response[S]]

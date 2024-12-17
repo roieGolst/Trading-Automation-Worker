@@ -1,27 +1,32 @@
-from dataclasses import dataclass
-from uuid import UUID
+from logging import Logger
 
-from data.model.task.Task import Brokerage, ActivationTask
-from data.model.task.types import Response, Status
-from services.autoRsaService.EnvManager import EnvManager
+from data.model.task.Task import ActivationTask
+from data.model.task.types import Response
+from data.strategy.grpc.DefaultServicer import ActivationResponse
+from services.autoRsaService.AutoRSAService import AutoRSAService
 from useCase.IUseCase import IUseCase
 
 
 class ActivationUseCase(IUseCase[ActivationTask]):
-    _env_manager: EnvManager
+    _auto_rsa: AutoRSAService
+    _logger: Logger
 
-    def __init__(self, env_manager: EnvManager):
-        self._env_manager = env_manager
+    def __init__(self, auto_rsa: AutoRSAService, logger: Logger):
+        self._auto_rsa = auto_rsa
+        self._logger = logger
 
     def perform(self, data: ActivationTask) -> Response:
-        account_id = self._env_manager.add_account(
-            broker_name=data.brokerage.name,
-            account_details=data.cred
-        )
+        self._logger.debug(f"Perform activation task; id: {data.task_id}")
+        try:
+            res = self._auto_rsa.activation(
+                account_name=data.account_name,
+                brokerage=data.brokerage,
+                account_details=data.cred
+            )
 
-        return Response(
-            status=Status.Successful,
-            metadata={
-                "account_id": account_id
-            }
-        )
+            return Response[ActivationResponse](success=True, value=ActivationResponse(res))
+        except Exception as err:
+            return Response(
+                success=False,
+                error=f"Internal Error: {err}"
+            )

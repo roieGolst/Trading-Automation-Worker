@@ -10,7 +10,6 @@ class IRouter(ABC):
     def set_task_performer(self, task_type: TaskType, performer: IUseCase[Task], force: bool = False):
         pass
 
-
     @abstractmethod
     def perform_task(self, task_type: TaskType, task: Task) -> Response:
         pass

@@ -6,7 +6,7 @@ service MainTradingService {
   rpc ping(Ping) returns (Pong);
 }
 message Ping {
-  string ip = 1;
+  int32 return_to_port = 1;
 }
 
 message Pong {

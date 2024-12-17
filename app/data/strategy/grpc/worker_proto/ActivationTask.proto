@@ -40,12 +40,12 @@ message ActivationCreds {
 
 message Task {
   Types.BaseTask base_task = 1;
-  Brokerage brokerage = 2;
-  ActivationCreds account_details = 3;
+  string account_name = 2;
+  Brokerage brokerage = 3;
+  ActivationCreds account_details = 4;
 }
 
 message Response {
   Types.Status status = 1;
-  optional Types.UUID account_id = 2;
-  optional string message = 3;
+  optional string message = 2;
 }

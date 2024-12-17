@@ -1,4 +1,5 @@
 from abc import ABC
+from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import Any
 from uuid import UUID
@@ -10,9 +11,9 @@ class TaskType(Enum):
     Transaction = "transaction"
 
 
-class TransactionMethod(Enum):
-    Sell = "Sell"
-    Buy = "Buy"
+class TransactionMethod(IntEnum):
+    Sell = 0
+    Buy = 1
 
 
 class Brokerage(IntEnum):
@@ -35,7 +36,6 @@ class Brokerage(IntEnum):
 
 
 class Task(ABC):
-    # TODO: Consider to remove this taskType
     task_type: TaskType
     task_id: UUID
 
@@ -44,9 +44,8 @@ class Task(ABC):
         self.task_id = task_id
 
     @staticmethod
-    def Activation(task_id: UUID, brokerage: Brokerage, creds: Any):
-
-        return _ActivationTask(task_id, brokerage, creds)
+    def Activation(task_id: UUID, account_name: str, brokerage: Brokerage, creds: Any):
+        return _ActivationTask(task_id, account_name, brokerage, creds)
 
     @staticmethod
     def Deactivation(task_id: UUID, account_id: UUID):
@@ -58,11 +57,13 @@ class Task(ABC):
 
 
 class _ActivationTask(Task):
+    account_name: str
     brokerage: Brokerage
     cred: any
 
-    def __init__(self, task_id: UUID, brokerage: Brokerage, creds: Any):
+    def __init__(self, task_id: UUID, account_name: str, brokerage: Brokerage, creds: Any):
         super().__init__(task_type=TaskType.Activation, task_id=task_id)
+        self.account_name = account_name
         self.brokerage = brokerage
         self.cred = self.parse_creds(creds)
 
@@ -129,4 +130,22 @@ class _TransactionTask(Task):
 
 ActivationTask = _ActivationTask
 DeactivationTask = _DeactivationTask
-TransactionTask = _ActivationTask
+TransactionTask = _TransactionTask
+
+
+@dataclass
+class ActivationResponse:
+    success: bool
+
+
+@dataclass
+class DeactivationResponse:
+    # Added if needed
+    pass
+
+
+@dataclass
+class TransactionResponse:
+    stdout: str
+
+
