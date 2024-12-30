@@ -49,7 +49,7 @@ class DefaultServicer(BaseServicer):
         try:
             result: Response = self._handler(Task.Deactivation(
                 task_id=UUID(request.base_task.task_id.value),
-                account_id=UUID(request.account_id.value)
+                account_name=request.account_name
             ))
 
         except Exception as err:

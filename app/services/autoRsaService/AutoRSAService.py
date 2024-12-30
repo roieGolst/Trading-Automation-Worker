@@ -36,8 +36,8 @@ class AutoRSAService:
             account_details=account_details
         )
 
-    def deactivation(self, account_id: UUID):
-        return self._env_manager.remove_account(account_id)
+    def deactivation(self, account_name: str):
+        return self._env_manager.remove_account(account_name)
 
     def transaction(
         self,

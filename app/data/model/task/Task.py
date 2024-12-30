@@ -48,8 +48,8 @@ class Task(ABC):
         return _ActivationTask(task_id, account_name, brokerage, creds)
 
     @staticmethod
-    def Deactivation(task_id: UUID, account_id: UUID):
-        return _DeactivationTask(task_id, account_id)
+    def Deactivation(task_id: UUID, account_name: str):
+        return _DeactivationTask(task_id, account_name)
 
     @staticmethod
     def Transaction(task_id: UUID, method: TransactionMethod, amount: int, ticker: str):
@@ -109,11 +109,11 @@ class _ActivationTask(Task):
 
 
 class _DeactivationTask(Task):
-    account_id: UUID
+    account_name: str
 
-    def __init__(self, task_id: UUID, account_id: UUID):
+    def __init__(self, task_id: UUID, account_name: str):
         super().__init__(task_type=TaskType.Deactivation, task_id=task_id)
-        self.account_id = account_id
+        self.account_name = account_name
 
 
 class _TransactionTask(Task):

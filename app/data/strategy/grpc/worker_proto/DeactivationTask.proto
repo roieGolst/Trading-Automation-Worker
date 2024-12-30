@@ -6,7 +6,7 @@ package Task.Deactivation;
 
 message Task {
   Types.BaseTask base_task = 1;
-  Types.UUID account_id = 2;
+  string account_name = 2;
 }
 
 message Response {

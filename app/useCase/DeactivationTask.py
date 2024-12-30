@@ -17,13 +17,13 @@ class DeactivationUseCase(IUseCase[DeactivationTask]):
     def perform(self, data: DeactivationTask) -> Response:
         self._logger.debug(f"Perform deactivation task")
         is_removed = self._auto_rsa.deactivation(
-            account_id=data.account_id
+            account_name=data.account_name
         )
 
         if not is_removed:
             return Response(
                 success=False,
-                error=f"Account id: {data.account_id} not exists"
+                error=f"Account id: {data.account_name} not exists"
             )
 
         return Response[None](success=True)
