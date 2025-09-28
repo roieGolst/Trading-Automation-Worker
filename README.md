@@ -26,6 +26,8 @@ The diagrams below highlight how client calls propagate through the main server 
 4. **Response Handling**: The worker returns success/error payloads via gRPC
 
 ### Worker Communication Flow (Mermaid)
+<details>
+<summary>Expanded Mermaid overview</summary>
 
 ```mermaid
 flowchart TD
@@ -52,6 +54,8 @@ flowchart TD
     Bootstrap -->|Startup ping| MainPing
     MainPing -->|Registers callback port| StubMgr
 ```
+
+</details>
 
 ### Worker Communication Flow (ASCII)
 
