@@ -16,6 +16,107 @@ The worker connects to the main server through:
 2. **Ping/Pong**: Initial connection establishment with the main server
 3. **Task Execution**: Receives and processes trading tasks (activation, deactivation, transactions)
 
+## Worker Communication Flow
+
+The diagrams below highlight how client calls propagate through the main server into the worker and back:
+
+1. **Registration**: Worker starts, pings `MainTradingService`, and publishes its callback port
+2. **Task Reception**: Main server forwards activation/deactivation/transaction RPCs through the worker stub
+3. **Task Execution**: `TaskFacade` routes tasks to the proper use case and into `AutoRSAService`
+4. **Response Handling**: The worker returns success/error payloads via gRPC
+
+### Worker Communication Flow (Mermaid)
+
+```mermaid
+flowchart TD
+    REST["REST Clients\n(Web/Mobile)"] -->|JSON / HTTPS| FastAPI
+
+    subgraph Main["Trading Automation Main Server"]
+        FastAPI["FastAPI Gateway\nREST API"] --> Router["Group Router\n(DefaultGroupHandler)"]
+        Router --> Redis[("Redis Registry\n(Group metadata / status)")]
+        Router --> StubMgr["Worker Stub Registry\n(Trading Stub per worker)"]
+        MainPing["MainTradingService\nPing endpoint"] --> StubMgr
+    end
+
+    subgraph Worker["Trading Automation Worker"]
+        Bootstrap["main.py bootstrap"] --> Fetcher["GrpcTaskFetcher\n(WorkerTradingService server)"]
+        Fetcher --> Servicer["DefaultServicer\n(gRPC handlers)"]
+        Servicer --> Facade["TaskFacade\n(task dispatch)"]
+        Facade --> UseCases["Use Cases\nActivation / Deactivation / Transaction"]
+        UseCases --> AutoRSA["AutoRSAService\nCLI wrapper"]
+        AutoRSA --> Cli["AutoRSA CLI\n(executes trades)"]
+        Cli --> Broker["Brokerage / Exchange"]
+    end
+
+    StubMgr -->|Activation / Transaction RPC| Servicer
+    Bootstrap -->|Startup ping| MainPing
+    MainPing -->|Registers callback port| StubMgr
+```
+
+### Worker Communication Flow (ASCII)
+
+<details>
+<summary>Expanded ASCII overview</summary>
+
+```
+                                    ┌─────────────────────────────┐
+                                    │         REST Clients        │
+                                    └────────────┬────────────────┘
+                                                 │ HTTPS JSON
+                                                 ▼
+           ┌────────────────────────────────────────────────────────────────┐
+           │               Trading Automation Main Server                   │
+           │----------------------------------------------------------------│
+           │ FastAPI Layer                                                  │
+           │  - validates payloads & enforces auth                          │
+           │  - normalises trading intents                                  │
+           │                                                                │
+           │ DefaultGroupHandler / Router                                   │
+           │  - locates worker stubs per account group                      │
+           │  - persists routing data & creds via Redis                     │
+           │                                                                │
+           │ Worker Stub Registry (Trading Stub)                            │
+           │  - maintains gRPC channels to each worker                      │
+           │  - forwards Activation / Deactivation / Transaction RPC        │
+           │                                                                │
+           │ MainTradingService (Ping)                                      │
+           │  - receives worker startup pings                               │
+           │  - records callback host:port for routing                      │
+           └───────────────────────┬────────────────────────────────────────┘
+                                   │ secure gRPC
+                                   ▼
+          ┌──────────────────────────────────────────────────────────────────┐
+          │                 Trading Automation Worker                        │
+          │------------------------------------------------------------------│
+          │ main.py bootstrap                                                │
+          │  - loads configs & logger                                        │
+          │  - builds GrpcTaskFetcher                                        │
+          │  - wires TaskFacade with DefaultTaskHandler                      │
+          │                                                                  │
+          │ GrpcTaskFetcher / WorkerTradingService                           │
+          │  - starts gRPC server & registers DefaultServicer                │
+          │  - pings MainTradingService to advertise callback port           │
+          │                                                                  │
+          │ DefaultServicer                                                  │
+          │  - converts inbound proto tasks -> internal Task models          │
+          │  - delegates to TaskFacade.on_task                               │
+          │                                                                  │
+          │ TaskFacade                                                       │
+          │  - routes task types -> specific use cases                       │
+          │                                                                  │
+          │ Use Cases (Activation/Deactivation/Transaction)                  │
+          │  - execute AutoRSA operations                                    │
+          │  - build Response payloads                                       │
+          │                                                                  │
+          │ AutoRSAService                                                   │
+          │  - manages .env credentials & runs AutoRSA CLI                   │
+          │  - returns stdout / errors back to gRPC caller                   │
+          └──────────────────────────────────────────────────────────────────┘
+```
+
+</details>
+
+
 ## Goals & Features
 
 ### Primary Goals
@@ -181,15 +282,6 @@ poetry run pytest
 poetry run black app/
 poetry run flake8 app/
 ```
-
-## Integration with Main Server
-
-The worker integrates with the main server through:
-
-1. **Registration**: Sends ping to main server on startup
-2. **Task Reception**: Receives tasks via gRPC service calls
-3. **Result Reporting**: Returns task execution results
-4. **Health Checks**: Maintains connection health
 
 ## Troubleshooting
 
