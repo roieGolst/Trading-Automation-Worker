@@ -74,8 +74,8 @@ Distributed execution node for the Trading Automation platform. Each worker boot
 ## Prerequisites
 
 - Python 3.9+
-- Poetry (recommended for dependency management)
-- AutoRSA CLI dependencies (`pip install -r lib/auto-rsa/requirements.txt`)
+- uv (recommended for dependency management)
+- AutoRSA CLI dependencies (run `bash scripts/build_auto_rsa.sh`)
 - Access to a running Trading-Automation-Main instance over gRPC
 - Docker (optional) for containerized workloads
 
@@ -87,32 +87,32 @@ Distributed execution node for the Trading Automation platform. Each worker boot
    cd Trading-Automation-Worker
    ```
 
-2. **Install Poetry** (if needed)
+2. **Install uv** (if needed)
    ```bash
-   curl -sSL https://install.python-poetry.org | python3 -
+   curl -Ls https://astral.sh/uv/install.sh | sh
    ```
 
 3. **Install dependencies**
    ```bash
-   poetry install
+   uv sync
    ```
 
 4. **Provision AutoRSA**
    ```bash
-   pip install -r lib/auto-rsa/requirements.txt
+   bash scripts/build_auto_rsa.sh
    ```
-   Populate `lib/auto-rsa/creds` and `.env` according to brokerage requirements.
+   The script clones/updates `lib/auto-rsa`, builds its virtual environment, installs Playwright, and ensures the runner scripts are executable. Populate `lib/auto-rsa/creds` and `.env` according to brokerage requirements once it finishes.
 
 5. **Generate protobuf stubs**
    ```bash
-   poetry run bash scripts/proto_build.sh
+   uv run bash scripts/proto_build.sh
    ```
 
 6. **Configure worker endpoints** – update `configs/app.json` with the main server host/port and the worker's listening address.
 
 7. **Launch the worker**
    ```bash
-   poetry run python app/main.py
+   uv run python app/main.py
    ```
    The worker pings the main service, binds its gRPC server (default `0.0.0.0:50051`), and begins consuming tasks.
 
@@ -120,7 +120,7 @@ Distributed execution node for the Trading Automation platform. Each worker boot
 
 - **Build image**
   ```bash
-  docker build -t trading-worker .
+  docker build -t ta-worker .
   ```
 
 - **Run container**
@@ -152,9 +152,9 @@ Distributed execution node for the Trading Automation platform. Each worker boot
 
 ## Development Tasks
 
-- **Protobuf generation**: `poetry run bash scripts/proto_build.sh`
-- **Unit tests**: `poetry run pytest` (ensure dependencies and any mocks for AutoRSA are available)
-- **Linting/formatting**: integrate `ruff`, `flake8`, or `black` via Poetry as desired.
+- **Protobuf generation**: `uv run bash scripts/proto_build.sh`
+- **Unit tests**: `uv run pytest` (ensure dependencies and any mocks for AutoRSA are available)
+- **Linting/formatting**: integrate `ruff`, `flake8`, or `black` via uv-managed environments as desired.
 
 ## Project Layout
 
