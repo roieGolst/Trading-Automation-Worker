@@ -1,169 +1,93 @@
 # Trading Automation Worker
 
-A distributed worker node component for the Trading Automation system that executes trading tasks via gRPC communication with the main server.
+Distributed execution node for the Trading Automation platform. Each worker boots, registers with the main control plane, exposes a gRPC task surface, and drives brokerage automation through the AutoRSA CLI.
 
 ## System Architecture
 
-This project is part of a distributed trading automation system consisting of two main components:
+- **Entry point** (`app/main.py`) – loads configuration, wires logging, and kicks off the worker bootstrap sequence.
+- **Bootstrap Orchestrator** (`app/bootstrap.py`) – initializes the gRPC client/server, task facade, and AutoRSA services, then blocks on task consumption.
+- **gRPC Task Server** (`app/data/strategy/grpc/DefaultServicer.py`) – receives activation/deactivation/transaction RPCs from Trading-Automation-Main and normalises payloads.
+- **Task Dispatch Layer** (`app/taskFacade/TaskFacade.py`) – maps protobuf tasks to use cases, handles retries, and raises structured errors back over gRPC.
+- **AutoRSA Integration** (`app/services/autoRsaService/AutoRSAService.py`) – wraps the AutoRSA CLI to perform brokerage logins, account activation, and trade execution.
+- **Structured Logging** (`app/logger.py`) – streams JSON logs to stdout and rotates error output into `error.log` for local debugging.
 
-- **[Trading-Automation-Main](https://github.com/roieGolst/Trading-Automation-Main)**: Central server that coordinates worker nodes, provides REST API, and manages account information
-- **Trading-Automation-Worker**: This worker node that executes trading tasks and communicates with the main server via gRPC
+```
+┌─────────────────────────────┐       Ping (startup)        ┌──────────────────────────┐
+│ Trading-Automation-Worker   │────────────────────────────▶│ Trading-Automation-Main  │
+├─────────────────────────────┤                             ├──────────────────────────┤
+│ GrpcTaskFetcher server      │◀── Activation / Task RPC ───│ Worker stub registry     │
+│ DefaultServicer handlers    │                             │ Redis-backed routing     │
+│ TaskFacade + UseCases       │─── Task responses ─────────▶│ REST / gRPC orchestrator │
+│ AutoRSA runner              │                             │                          │
+└─────────────────────────────┘                             └──────────────────────────┘
+        ▲
+        │ AutoRSA CLI (commands)
+        ▼
+   Brokerage / Exchange APIs
+```
 
-## Connection Between Projects
-
-The worker connects to the main server through:
-1. **gRPC Communication**: Bidirectional communication using protocol buffers
-2. **Ping/Pong**: Initial connection establishment with the main server
-3. **Task Execution**: Receives and processes trading tasks (activation, deactivation, transactions)
-
-## Worker Communication Flow
-
-The diagrams below highlight how client calls propagate through the main server into the worker and back:
-
-1. **Registration**: Worker starts, pings `MainTradingService`, and publishes its callback port
-2. **Task Reception**: Main server forwards activation/deactivation/transaction RPCs through the worker stub
-3. **Task Execution**: `TaskFacade` routes tasks to the proper use case and into `AutoRSAService`
-4. **Response Handling**: The worker returns success/error payloads via gRPC
-
-### Worker Communication Flow (Mermaid)
 <details>
-<summary>Expanded Mermaid overview</summary>
+<summary>Worker Runtime Walkthrough (ASCII)</summary>
 
-```mermaid
-flowchart TD
-    REST["REST Clients\n(Web/Mobile)"] -->|JSON / HTTPS| FastAPI
-
-    subgraph Main["Trading Automation Main Server"]
-        FastAPI["FastAPI Gateway\nREST API"] --> Router["Group Router\n(DefaultGroupHandler)"]
-        Router --> Redis[("Redis Registry\n(Group metadata / status)")]
-        Router --> StubMgr["Worker Stub Registry\n(Trading Stub per worker)"]
-        MainPing["MainTradingService\nPing endpoint"] --> StubMgr
-    end
-
-    subgraph Worker["Trading Automation Worker"]
-        Bootstrap["main.py bootstrap"] --> Fetcher["GrpcTaskFetcher\n(WorkerTradingService server)"]
-        Fetcher --> Servicer["DefaultServicer\n(gRPC handlers)"]
-        Servicer --> Facade["TaskFacade\n(task dispatch)"]
-        Facade --> UseCases["Use Cases\nActivation / Deactivation / Transaction"]
-        UseCases --> AutoRSA["AutoRSAService\nCLI wrapper"]
-        AutoRSA --> Cli["AutoRSA CLI\n(executes trades)"]
-        Cli --> Broker["Brokerage / Exchange"]
-    end
-
-    StubMgr -->|Activation / Transaction RPC| Servicer
-    Bootstrap -->|Startup ping| MainPing
-    MainPing -->|Registers callback port| StubMgr
+```
+                         ┌────────────────────────┐
+                         │ Trading Automation Main│
+                         │────────────────────────│
+                         │ • FastAPI REST router  │
+                         │ • Redis group registry │
+                         │ • Worker stub manager  │
+                         └──────────┬─────────────┘
+                                    │ secure gRPC
+                                    ▼
+        ┌────────────────────────────────────────────────────────────┐
+        │               Trading Automation Worker                    │
+        │────────────────────────────────────────────────────────────│
+        │  Bootstrap (app/bootstrap.py)                              │
+        │    • loads configs/app.json                                │
+        │    • spins up GrpcTaskFetcher server                       │
+        │    • issues startup ping to MainTradingService             │
+        │                                                            │
+        │ DefaultServicer(app/data/strategy/grpc/DefaultServicer.py) │
+        │    • exposes Activate/Deactivate/Transaction RPCs          │
+        │    • emits protobuf Payload → Task models                  │
+        │                                                            │
+        │  TaskFacade (app/taskFacade/TaskFacade.py)                 │
+        │    • selects Activation/Deactivation/Transaction use case  │
+        │    • coordinates AutoRSAService execution                  │
+        │                                                            │
+        │  AutoRSAService (app/services/autoRsaService/...)          │
+        │    • shells out to lib/auto-rsa/ scripts                   │
+        │    • parses CLI responses → gRPC replies                   │
+        └────────────────────────────────────────────────────────────┘
 ```
 
 </details>
 
-### Worker Communication Flow (ASCII)
+## Capabilities
 
-<details>
-<summary>Expanded ASCII overview</summary>
-
-```
-                                    ┌─────────────────────────────┐
-                                    │         REST Clients        │
-                                    └────────────┬────────────────┘
-                                                 │ HTTPS JSON
-                                                 ▼
-           ┌────────────────────────────────────────────────────────────────┐
-           │               Trading Automation Main Server                   │
-           │----------------------------------------------------------------│
-           │ FastAPI Layer                                                  │
-           │  - validates payloads & enforces auth                          │
-           │  - normalises trading intents                                  │
-           │                                                                │
-           │ DefaultGroupHandler / Router                                   │
-           │  - locates worker stubs per account group                      │
-           │  - persists routing data & creds via Redis                     │
-           │                                                                │
-           │ Worker Stub Registry (Trading Stub)                            │
-           │  - maintains gRPC channels to each worker                      │
-           │  - forwards Activation / Deactivation / Transaction RPC        │
-           │                                                                │
-           │ MainTradingService (Ping)                                      │
-           │  - receives worker startup pings                               │
-           │  - records callback host:port for routing                      │
-           └───────────────────────┬────────────────────────────────────────┘
-                                   │ secure gRPC
-                                   ▼
-          ┌──────────────────────────────────────────────────────────────────┐
-          │                 Trading Automation Worker                        │
-          │------------------------------------------------------------------│
-          │ main.py bootstrap                                                │
-          │  - loads configs & logger                                        │
-          │  - builds GrpcTaskFetcher                                        │
-          │  - wires TaskFacade with DefaultTaskHandler                      │
-          │                                                                  │
-          │ GrpcTaskFetcher / WorkerTradingService                           │
-          │  - starts gRPC server & registers DefaultServicer                │
-          │  - pings MainTradingService to advertise callback port           │
-          │                                                                  │
-          │ DefaultServicer                                                  │
-          │  - converts inbound proto tasks -> internal Task models          │
-          │  - delegates to TaskFacade.on_task                               │
-          │                                                                  │
-          │ TaskFacade                                                       │
-          │  - routes task types -> specific use cases                       │
-          │                                                                  │
-          │ Use Cases (Activation/Deactivation/Transaction)                  │
-          │  - execute AutoRSA operations                                    │
-          │  - build Response payloads                                       │
-          │                                                                  │
-          │ AutoRSAService                                                   │
-          │  - manages .env credentials & runs AutoRSA CLI                   │
-          │  - returns stdout / errors back to gRPC caller                   │
-          └──────────────────────────────────────────────────────────────────┘
-```
-
-</details>
-
-
-## Goals & Features
-
-### Primary Goals
-- Execute trading tasks received from the main server
-- Manage brokerage account activation/deactivation
-- Process buy/sell transactions using the AutoRSA trading tool
-- Maintain reliable gRPC communication with the main server
-
-### Key Features
-- **Task Processing**: Handles activation, deactivation, and transaction tasks
-- **AutoRSA Integration**: Wraps the AutoRSA CLI tool for actual trading operations
-- **Environment Management**: Manages account credentials and configurations
-- **Containerized Deployment**: Docker support with multi-Python environment setup
-- **Logging**: Comprehensive logging for monitoring and debugging
+- Registers itself with the main control plane via periodic ping/keepalive and replays queued tasks on reconnect.
+- Exposes a gRPC task API for account activation, deactivation, and transaction execution.
+- Transforms strongly typed protobuf requests into AutoRSA commands with credential validation and error surfacing.
+- Ships with Dockerfiles for standalone worker containers or Compose-based multi-service stacks.
+- Provides configurable logging and retry hooks suitable for headless deployment.
 
 ## Prerequisites
 
-### System Requirements
-- Python 3.9+ (for worker functionality)
-- Python 3.12 (for AutoRSA CLI tool)
-- Docker (for containerized deployment)
-- Git
+- Python 3.9+
+- Poetry (recommended for dependency management)
+- AutoRSA CLI dependencies (`pip install -r lib/auto-rsa/requirements.txt`)
+- Access to a running Trading-Automation-Main instance over gRPC
+- Docker (optional) for containerized workloads
 
-### Dependencies
-- **Core**: `grpcio`, `grpcio-tools` for gRPC communication
-- **Type Support**: `typing-extensions`, `mypy-protobuf`
-- **Protocol Buffers**: `protoletariat` for protobuf processing
+## Getting Started (Local)
 
-### External Tools
-- **AutoRSA**: Trading automation CLI tool (included as submodule)
-- **Redis**: Required by the main server (not directly used by worker)
-
-## Installation & Setup
-
-### Local Development
-
-1. **Clone the repository**
+1. **Clone**
    ```bash
    git clone <repository-url>
    cd Trading-Automation-Worker
    ```
 
-2. **Install Poetry** (if not already installed)
+2. **Install Poetry** (if needed)
    ```bash
    curl -sSL https://install.python-poetry.org | python3 -
    ```
@@ -173,144 +97,98 @@ flowchart TD
    poetry install
    ```
 
-4. **Build protocol buffers**
+4. **Provision AutoRSA**
    ```bash
-   ./scripts/proto_build.sh
+   pip install -r lib/auto-rsa/requirements.txt
    ```
+   Populate `lib/auto-rsa/creds` and `.env` according to brokerage requirements.
 
-5. **Build AutoRSA tool**
+5. **Generate protobuf stubs**
    ```bash
-   ./scripts/build_auto_rsa.sh
+   poetry run bash scripts/proto_build.sh
    ```
 
-6. **Configure application**
-   Create `configs/app.json` with:
-   ```json
-   {
-     "MAIN_SERVER_HOST": "localhost",
-     "MAIN_SERVER_PORT": 8080,
-     "TASK_FETCHER_HOST": "0.0.0.0",
-     "TASK_FETCHER_PORT": 50051
-   }
-   ```
+6. **Configure worker endpoints** – update `configs/app.json` with the main server host/port and the worker's listening address.
 
-### Docker Deployment
-
-1. **Build Docker image**
+7. **Launch the worker**
    ```bash
-   docker build -t trading-worker .
+   poetry run python app/main.py
    ```
+   The worker pings the main service, binds its gRPC server (default `0.0.0.0:50051`), and begins consuming tasks.
 
-2. **Run container**
-   ```bash
-   docker run -d --name trading-worker \
-     -p 50051:50051 \
-     -v $(pwd)/configs:/app/configs \
-     trading-worker
-   ```
+## Docker & Compose
+
+- **Build image**
+  ```bash
+  docker build -t trading-worker .
+  ```
+
+- **Run container**
+  ```bash
+  docker run -d --name trading-worker \
+    -p 50051:50051 \
+    -v $(pwd)/configs:/app/configs \
+    -v $(pwd)/lib/auto-rsa:/app/lib/auto-rsa \
+    trading-worker
+  ```
+  Ensure the container can reach the main service gRPC endpoint and that AutoRSA credentials are mounted securely.
+
+- **Compose stack** – when using the main project’s `docker-compose.yml`, tag the image as `worker:latest` so the orchestrator can schedule it.
 
 ## Configuration
 
-### Application Configuration (`configs/app.json`)
-- `MAIN_SERVER_HOST`: Main server hostname/IP
-- `MAIN_SERVER_PORT`: Main server gRPC port
-- `TASK_FETCHER_HOST`: Worker's listening host
-- `TASK_FETCHER_PORT`: Worker's listening port
+- `configs/app.json` – declares `MAIN_SERVER_HOST`, `MAIN_SERVER_PORT`, and the worker’s `TASK_FETCHER_*` bind settings.
+- `lib/auto-rsa/.env` – broker-specific secrets such as usernames, passwords, and MFA seeds.
+- `lib/auto-rsa/creds/` – encrypted credential bundles consumed by AutoRSA.
+- Environment variables can override defaults by extending the bootstrap logic in `app/bootstrap.py`.
 
-### Environment Configuration
-- AutoRSA configurations are managed in `./lib/auto-rsa/.env`
-- Account details are dynamically added/removed during activation/deactivation
+## gRPC Task Lifecycle
 
-## Usage
+1. Worker boots, loads config, and sends a `Ping` to `MainTradingService` with its callback host/port.
+2. Trading-Automation-Main dials the worker and establishes a bidirectional gRPC channel.
+3. Incoming protobuf tasks hit `DefaultServicer`, which converts them into internal task models.
+4. `TaskFacade` routes each task to the matching use case and invokes `AutoRSAService` to perform the action.
+5. Results (success/error payloads) are serialized back over gRPC to the main service for client responses.
 
-### Starting the Worker
+## Development Tasks
 
-**Local:**
-```bash
-poetry run python app/main.py
-```
+- **Protobuf generation**: `poetry run bash scripts/proto_build.sh`
+- **Unit tests**: `poetry run pytest` (ensure dependencies and any mocks for AutoRSA are available)
+- **Linting/formatting**: integrate `ruff`, `flake8`, or `black` via Poetry as desired.
 
-**Docker:**
-```bash
-docker run trading-worker
-```
-
-### Task Processing
-
-The worker automatically:
-1. Connects to the main server via gRPC
-2. Registers itself by sending a ping
-3. Listens for incoming tasks
-4. Executes tasks using the appropriate services
-5. Returns results to the main server
-
-### Supported Task Types
-
-1. **Activation Tasks**: Add new brokerage accounts
-2. **Deactivation Tasks**: Remove brokerage accounts
-3. **Transaction Tasks**: Execute buy/sell orders
-
-## Project Structure
+## Project Layout
 
 ```
 app/
-├── main.py                 # Application entry point
-├── bootstrap.py            # Application bootstrap logic
-├── logger.py              # Logging configuration
-├── taskFacade/            # Task handling abstraction
+├── main.py                      # Worker entry point and runtime loop
+├── bootstrap.py                 # Config loading, ping client, and gRPC bootstrap
+├── logger.py                    # Structured logging configuration
 ├── data/
-│   ├── model/task/        # Task data models
-│   └── strategy/grpc/     # gRPC implementation and protobuf files
-└── services/
-    └── autoRsaService/    # AutoRSA integration service
-
-configs/                   # Configuration files
-scripts/                   # Build and setup scripts
-lib/auto-rsa/             # AutoRSA CLI tool (submodule)
+│   ├── strategy/grpc/           # GrpcTaskFetcher, DefaultServicer, generated stubs
+│   └── model/task/              # Internal task DTOs and converters
+├── taskFacade/TaskFacade.py     # Central task dispatcher
+├── useCase/                     # Activation/Deactivation/Transaction flows
+├── services/autoRsaService/     # AutoRSA command execution wrapper
+├── router/Router.py             # Factory wiring for task handlers
+configs/app.json                 # Worker runtime configuration
+scripts/proto_build.sh           # Regenerate protobuf definitions
+lib/auto-rsa/                    # Embedded AutoRSA CLI toolkit
+Dockerfile                       # Container image definition
 ```
 
-## Development
+## Observability & Ops
 
-### Building Protocol Buffers
-```bash
-./scripts/proto_build.sh
-```
-
-### Running Tests
-```bash
-poetry run pytest
-```
-
-### Code Style
-```bash
-poetry run black app/
-poetry run flake8 app/
-```
+- `app/logger.py` emits JSON logs to stdout and mirrors exceptions into `error.log`—ship the stream to your log aggregator in production.
+- gRPC keepalive is managed in the bootstrap; tune intervals/timeouts before deployment to noisy networks.
+- AutoRSA commands may surface sensitive output—mask logs and secure the `lib/auto-rsa` directory.
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Connection Failed**: Ensure main server is running and accessible
-2. **AutoRSA Errors**: Check Python 3.12 installation and AutoRSA setup
-3. **Port Conflicts**: Verify gRPC port availability
-4. **Permission Errors**: Ensure proper file permissions for scripts
-
-### Logs
-Check application logs for detailed error information and debugging.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes and add tests
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-[License information to be added]
+- **Ping failures**: verify `MAIN_SERVER_HOST`/`PORT` and that the worker can reach the orchestrator over the network.
+- **AutoRSA errors**: ensure Python dependencies are installed and credentials in `lib/auto-rsa` are valid.
+- **gRPC port conflicts**: adjust `TASK_FETCHER_PORT` in `configs/app.json` or the Docker port mapping.
+- **Permission issues**: AutoRSA scripts require execution permission (`chmod +x`) when mounted into containers.
 
 ## Related Projects
 
-- [Trading-Automation-Main](https://github.com/roieGolst/Trading-Automation-Main) - Central coordination server
+- [Trading-Automation-Main](https://github.com/roieGolst/Trading-Automation-Main) – FastAPI control plane and worker orchestrator.
