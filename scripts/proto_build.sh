@@ -18,7 +18,7 @@ MAIN_PROTO_DIST="dist_main"
 mkdir $WORKER_PROTO_DIST
 mkdir $MAIN_PROTO_DIST
 
-poetry run python -m grpc_tools.protoc \
+python -m grpc_tools.protoc \
   -I $WORKER_PROTO_DIR/ \
   --python_out=$WORKER_PROTO_DIST/ \
   --grpc_python_out=$WORKER_PROTO_DIST/ \
@@ -33,7 +33,7 @@ protol \
 
 echo "Worker protos files generated successfully"
 
-poetry run python -m grpc_tools.protoc \
+python -m grpc_tools.protoc \
   -I $MAIN_PROTO_DIR/ \
   --python_out=$MAIN_PROTO_DIST/ \
   --grpc_python_out=$MAIN_PROTO_DIST/ \
