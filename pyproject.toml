@@ -1,19 +1,21 @@
-[tool.poetry]
+[project]
 name = "trading-automation-worker"
 version = "0.1.0"
 description = ""
-authors = ["RoieGolst <roiegol9@gmail.com>"]
+authors = [{ name = "RoieGolst", email = "roiegol9@gmail.com" }]
+requires-python = "~=3.9"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.9"
-typing-extensions = "^4.12.2"
-mypy-protobuf = "^3.6.0"
-grpcio = "^1.68.0"
-grpcio-tools = "^1.68.0"
-protoletariat = "^3.3.2"
-
+dependencies = [
+    "typing-extensions>=4.12.2,<5",
+    "mypy-protobuf>=3.6.0,<4",
+    "grpcio>=1.68.0,<2",
+    "grpcio-tools>=1.68.0,<2",
+    "protoletariat>=3.3.2,<4",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = false
